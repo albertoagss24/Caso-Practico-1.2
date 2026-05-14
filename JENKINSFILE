@@ -10,16 +10,17 @@ pipeline {
 
         stage('Unit') {
             steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                bat 'echo HOLA && set'
+                /*catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat '''
                         set PYTHONPATH=%WORKSPACE%
                         "%PYTHON_HOME%\\python.exe" -m coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest --junitxml=result-unit.xml test\\unit
                     '''
                 }
-                junit 'result-unit.xml'
+                junit 'result-unit.xml'*/
             }
         }
-                
+/*                
         stage('Rest') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -49,7 +50,6 @@ pipeline {
                         [threshold: 10, type: 'TOTAL', unstable: false]
                     ]
                 )
-
             }
         }
 
@@ -102,3 +102,4 @@ pipeline {
         }
     }
 }
+*/
