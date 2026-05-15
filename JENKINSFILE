@@ -28,9 +28,9 @@ pipeline {
                         set FLASK_APP=app.api:api_application
                         set FLASK_ENV=development
                         set PYTHONPATH=%WORKSPACE%
-                        start /B flask run
-                        start /B java -jar "C:\\Users\\Alberto Aguilera\\workspace\\DevOps & Cloud - UNIR\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock
-                        ping -n 5 127.0.0.1 > nul
+                        start "flask" /B cmd /c "%PYTHON_HOME%\\python.exe -m flask run >flask.log 2>&1 <nul"
+                        start "wiremock" /B cmd /c "java -jar \"C:\\Users\\Alberto Aguilera\\workspace\\DevOps & Cloud - UNIR\\wiremock-standalone-3.13.2.jar\" --port 9090 --root-dir test\\wiremock >wiremock.log 2>&1 <nul"
+                        ping -n 8 127.0.0.1 > nul
                         "%PYTHON_HOME%\\python.exe" -m pytest --junitxml=result-rest.xml test\\rest
                     '''
                 }    
