@@ -10,8 +10,7 @@ pipeline {
 
         stage('Unit') {
             steps {
-                bat 'echo HOLA && set'
-                /*
+                //bat 'echo HOLA && set'
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat '''
                         set PYTHONPATH=%WORKSPACE%
@@ -22,7 +21,7 @@ pipeline {
                 */
             }
         }
-        /*       
+ 
         stage('Rest') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
@@ -102,6 +101,5 @@ pipeline {
                 )
             }
         }
-        */
     }
 }
