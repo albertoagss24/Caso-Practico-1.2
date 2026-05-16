@@ -1,0 +1,162 @@
+pipeline {
+    agent none
+
+    stages {
+        stage('Get Code') {
+            agent any
+            steps {
+                git 'https://github.com/albertoagss24ss/Caso-Practico-1.1.git'
+                bat 'whoami'
+                bat 'hostname'
+                echo "WORKSPACE: ${WORKSPACE}"
+            }
+        }
+
+        stage('Tests') {
+            parallel {
+                stage('Agent 1 - Unit + Rest + Coverage') {
+                    agent { label 'agent1' }
+                    stages {
+                        stage('Unit') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                                    bat '''
+                                        set PYTHONPATH=%WORKSPACE%
+                                        "%PYTHON_HOME%\\python.exe" -m coverage run --branch --source=app --omit=app/__init__.py,app/api.py -m pytest --junitxml=result-unit.xml test\\unit
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Rest') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                                    bat '''
+                                        set FLASK_APP=app.api:api_application
+                                        set FLASK_ENV=development
+                                        set PYTHONPATH=%WORKSPACE%
+
+                                        start "flask" /B cmd /c ""%PYTHON_HOME%\\python.exe" -m flask run >flask.log 2>&1 <nul"
+                                        start "wiremock" /B cmd /c "java -jar "C:\\Users\\Alberto Aguilera\\workspace\\DevOps_and_Cloud_UNIR\\wiremock-standalone-3.13.2.jar\" --port 9090 --root-dir test\\wiremock >wiremock.log 2>&1 <nul"
+
+                                        :waitFlask
+                                        curl -s --max-time 1 http://localhost:5000/ >nul 2>&1
+                                        if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitFlask)
+                                        echo Flask ready
+
+                                        :waitWiremock
+                                        curl -s --max-time 1 http://localhost:9090/ >nul 2>&1
+                                        if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitWiremock)
+                                        echo Wiremock ready
+
+                                        "%PYTHON_HOME%\\python.exe" -m pytest --junitxml=result-rest.xml test\\rest
+                                    '''
+                                }    
+                            }
+                        }
+
+                        stage('Coverage') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                                    bat '''
+                                        "%PYTHON_HOME%\\python.exe" -m coverage xml -o coverage.xml
+                                    '''
+                                }
+                                recordCoverage(
+                                    tools: [[parser: 'COBERTURA', pattern: 'coverage.xml']],
+                                    qualityGates: [
+                                        [threshold: 95.0, metric: 'LINE',   baseline: 'PROJECT', criticality: 'NOTE'],
+                                        [threshold: 85.0, metric: 'LINE',   baseline: 'PROJECT', criticality: 'UNSTABLE'],
+                                        [threshold: 90.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'NOTE'],
+                                        [threshold: 80.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'UNSTABLE']
+                                    ]
+                                )
+                            }
+                        }
+                    }
+                }
+
+                stage('Agent 2 - Static + Security + Performance') {
+                    agent { label 'agent2' }
+                    stages {
+                        stage('Static') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                                    bat '"%PYTHON_HOME%\\python.exe" -m flake8 --format=pylint --exit-zero app > flake8.out'
+                                }
+                                recordIssues(
+                                    tools: [flake8(name: 'Flake8', pattern: 'flake8.out')],
+                                    qualityGates: [
+                                        [threshold: 8,  type: 'TOTAL', unstable: true],
+                                        [threshold: 10, type: 'TOTAL', unstable: false]
+                                    ]
+                                )
+                            }
+                        }
+
+                        stage('Security') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"                
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                                    bat '"%PYTHON_HOME%\\python.exe" -m bandit -r app -f custom --msg-template "{abspath}:{line}: [{test_id}] {msg}" --exit-zero -o bandit.out'
+                                }
+                                recordIssues(
+                                    tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')],
+                                    qualityGates: [
+                                        [threshold: 2, type: 'TOTAL', unstable: true],
+                                        [threshold: 4, type: 'TOTAL', unstable: false]
+                                    ]
+                                )
+                            }
+                        }
+
+                        stage('Performance') {
+                            steps {
+                                bat 'whoami'
+                                bat 'hostname'
+                                echo "WORKSPACE: ${WORKSPACE}"
+                                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                                    bat '''
+                                        set FLASK_APP=app.api:api_application
+                                        start "flask" /B cmd /c ""%PYTHON_HOME%\\python.exe" -m flask run >flask.log 2>&1 <nul"
+
+                                        :waitFlask
+                                        curl -s --max-time 1 http://localhost:5000/ >nul 2>&1
+                                        if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitFlask)
+                                        echo Flask ready
+
+                                        "%JMETER_HOME%\\bin\\jmeter.bat" -n -t test\\jmeter\\flask.jmx -l flask.jtl
+                                    '''
+                                }
+                                perfReport sourceDataFiles: 'flask.jtl'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            node('built-in') {
+                junit 'result*.xml'
+                cleanWs()
+            }
+        }
+    }
+}
