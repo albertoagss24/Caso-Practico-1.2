@@ -28,16 +28,20 @@ pipeline {
                         set FLASK_APP=app.api:api_application
                         set FLASK_ENV=development
                         set PYTHONPATH=%WORKSPACE%
+
                         start "flask" /B cmd /c ""%PYTHON_HOME%\\python.exe" -m flask run >flask.log 2>&1 <nul"
                         start "wiremock" /B cmd /c "java -jar "C:\\Users\\Alberto Aguilera\\workspace\\DevOps_and_Cloud_UNIR\\wiremock-standalone-3.13.2.jar\" --port 9090 --root-dir test\\wiremock >wiremock.log 2>&1 <nul"
+
                         :waitFlask
                         curl -s --max-time 1 http://localhost:5000/ >nul 2>&1
                         if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitFlask)
                         echo Flask ready
+
                         :waitWiremock
                         curl -s --max-time 1 http://localhost:9090/ >nul 2>&1
                         if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitWiremock)
                         echo Wiremock ready
+
                         "%PYTHON_HOME%\\python.exe" -m pytest --junitxml=result-rest.xml test\\rest
                     '''
                 }    
