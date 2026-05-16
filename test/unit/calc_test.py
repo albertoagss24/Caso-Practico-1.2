@@ -64,9 +64,9 @@ class TestCalculate(unittest.TestCase):
 
     # Test para auditar la división por cero (línea 24 de app/calc.py)
     def test_divide_method_fails_with_zero_denominator(self):
-        self.assertRaises(TypeError, self.calc.divide, 2, 0)
-        self.assertRaises(TypeError, self.calc.divide, -5, 0)
-        self.assertRaises(TypeError, self.calc.divide, 0.5, 0)
-        
+        self.assertRaises(TypeError, self.calc.divide(2, 0))
+        self.assertRaises(TypeError, self.calc.divide(-5, 0))
+        self.assertRaises(TypeError, self.calc.divide(0.5, 0))
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
