@@ -150,13 +150,4 @@ pipeline {
             }
         }
     }
-
-    post {
-        always {
-            node('built-in') {
-                junit 'result*.xml'
-                cleanWs()
-            }
-        }
-    }
 }
