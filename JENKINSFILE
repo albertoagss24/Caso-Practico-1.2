@@ -4,7 +4,8 @@ pipeline {
     stages {
         stage('Get Code') {
             steps {
-                git 'https://github.com/albertoagss24/Caso-Practico-1.2.git'
+                //git 'https://github.com/albertoagss24/Caso-Practico-1.2.git'
+                checkout scm
             }
         }
 
