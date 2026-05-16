@@ -84,8 +84,13 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat '''
                         set FLASK_APP=app.api:api_application
-                        start /B flask run
-                        ping -n 5 127.0.0.1 > nul
+                        start "flask" /B cmd /c ""%PYTHON_HOME%\\python.exe" -m flask run >flask.log 2>&1 <nul"
+
+                        :waitFlask
+                        curl -s --max-time 1 http://localhost:5000/ >nul 2>&1
+                        if %errorlevel% neq 0 (ping -n 2 127.0.0.1 >nul & goto waitFlask)
+                        echo Flask ready
+
                         "%JMETER_HOME%\\bin\\jmeter.bat" -n -t test\\jmeter\\flask.jmx -l flask.jtl
                     '''
                 }
